@@ -6,7 +6,66 @@
     <title>Shopify Order to Google Docs Formatter</title>
     <link rel="icon" type="image/x-icon" href="favicon.png">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">   
+    <style>
+        body {
+            background-color: #f4f6f8;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding-bottom: 50px;
+        }
+        .converter-card {
+            max-width: 950px;
+            margin: 40px auto;
+            border: none;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+            background: #ffffff;
+        }
+        .shopify-brand-color {
+            color: #008060;
+            font-weight: 700;
+        }
+        .btn-shopify {
+            background-color: #008060;
+            color: white;
+            border-radius: 8px;
+            padding: 12px 24px;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+        }
+        .btn-shopify:hover {
+            background-color: #006e52;
+            color: white;
+        }
+        .btn-copy {
+            background-color: #202124;
+            color: white;
+        }
+        .btn-copy:hover {
+            background-color: #3c4043;
+            color: white;
+        }
+        .table-responsive-container {
+            max-height: 450px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            margin-top: 20px;
+            display: none;
+        }
+        table {
+            font-size: 0.85rem;
+            white-space: nowrap;
+        }
+        thead {
+            position: sticky;
+            top: 0;
+            background-color: #f8f9fa;
+            z-index: 1;
+        }
+        .action-area {
+            display: none;
+        }
+    </style>
 </head>
 <body>
 
@@ -44,7 +103,285 @@
         </div>
     </div>
 </div>
-<script src="script.js"></script>
+
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+<script>
+let processedDataForCopy = [];
+let globalMaxLineItems = 0;
+
+// এক্সেল সিরিয়াল নাম্বারকে কাঙ্ক্ষিত ডেট ফরম্যাটে রূপান্তর করার ফাংশন
+function formatExcelDate(excelTimestamp) {
+    if (!excelTimestamp) return "";
+    
+    // যদি অলরেডি সঠিক ফরম্যাটে টেক্সট থাকে, তবে কনভার্ট করার দরকার নেই
+    if (String(excelTimestamp).includes('-') && String(excelTimestamp).includes(':')) {
+        return excelTimestamp;
+    }
+
+    const serial = parseFloat(excelTimestamp);
+    if (isNaN(serial)) return excelTimestamp;
+
+    // এক্সেল টাইমস্ট্যাম্প থেকে মিলিসেকেন্ড হিসেব করা
+    const utc_days  = Math.floor(serial - 25569);
+    const utc_value = utc_days * 86400;
+    const date_info = new Date(utc_value * 1000);
+
+    const fractional_day = serial - Math.floor(serial) + 0.0000001;
+    let total_seconds = Math.floor(86400 * fractional_day);
+
+    const hours = Math.floor(total_seconds / 3600);
+    total_seconds %= 3600;
+    const minutes = Math.floor(total_seconds / 60);
+    const seconds = total_seconds % 60;
+
+    date_info.setHours(hours, minutes, seconds);
+
+    // ফরম্যাটিং: YYYY-MM-DD HH:MM:SS +0600
+    const pad = (num) => String(num).padStart(2, '0');
+    
+    const year = date_info.getFullYear();
+    const month = pad(date_info.getMonth() + 1);
+    const day = pad(date_info.getDate());
+    const hr = pad(date_info.getHours());
+    const min = pad(date_info.getMinutes());
+    const sec = pad(date_info.getSeconds());
+
+    return `${year}-${month}-${day} ${hr}:${min}:${sec} +0600`;
+}
+
+document.getElementById('convertBtn').addEventListener('click', function() {
+    const fileInput = document.getElementById('excelFile');
+    
+    if (fileInput.files.length === 0) {
+        showStatus('অনুগ্রহ করে একটি .xlsx বা .csv ফাইল সিলেক্ট করুন!', 'danger');
+        return;
+    }
+
+    const file = fileInput.files[0];
+    const reader = new FileReader();
+
+    showStatus('ফাইল প্রসেস হচ্ছে, দয়া করে অপেক্ষা করুন...', 'info');
+
+    reader.onload = function(e) {
+        try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+            
+            const rawRows = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+
+            if (rawRows.length === 0) {
+                showStatus('ফাইলে কোনো ডাটা পাওয়া যায়নি!', 'danger');
+                return;
+            }
+
+            const getRowValue = (row, columnName) => {
+                const targetKey = columnName.toLowerCase().replace(/\s+/g, '');
+                for (let key in row) {
+                    if (key.toLowerCase().replace(/\s+/g, '') === targetKey) {
+                        return row[key];
+                    }
+                }
+                return "";
+            };
+
+            // ১. ফরওয়ার্ড ফিল (Forward Fill) লজিক (ট্যাগ বাদ দিয়ে করা হয়েছে)
+            const essentialCols = ['Created at', 'Billing Name', 'Billing Phone', 'Billing Street', 'Billing City', 'Total'];
+            let lastValidValues = {};
+
+            rawRows.forEach(row => {
+                essentialCols.forEach(col => {
+                    let val = getRowValue(row, col);
+                    if (val !== undefined && val !== null && String(val).trim() !== "") {
+                        lastValidValues[col] = val;
+                    } else if (lastValidValues[col] !== undefined) {
+                        row[col] = lastValidValues[col];
+                    }
+                });
+            });
+
+            // ২. অর্ডার আইডি অনুযায়ী গ্রুপ করা
+            const ordersGrouped = {};
+            rawRows.forEach(row => {
+                const orderName = String(getRowValue(row, 'Name')).trim();
+                if (!orderName) return;
+
+                if (!ordersGrouped[orderName]) {
+                    ordersGrouped[orderName] = [];
+                }
+                ordersGrouped[orderName].push(row);
+            });
+
+            // ৩. ডাটা সাজানো
+            processedDataForCopy = [];
+            globalMaxLineItems = 0; 
+
+            for (const orderName in ordersGrouped) {
+                const rows = ordersGrouped[orderName];
+                const firstRow = rows[0];
+
+                // ফোন নাম্বার ফরম্যাটিং (শুরুতে `0 যুক্ত করা)
+                let phone = String(getRowValue(firstRow, 'Billing Phone')).split('.')[0].trim();
+                if (phone.startsWith('880')) phone = phone.substring(3);
+                if (phone.startsWith('0')) phone = phone.substring(1);
+                
+                // আপনার চাহিদা অনুযায়ী ফরম্যাট: `01685769910
+                let formattedPhone = phone ? '`0' + phone : "";
+
+                // ডেট ফরম্যাট ফিক্সিং
+                let formattedDate = formatExcelDate(getRowValue(firstRow, 'Created at'));
+
+                let orderTag = getRowValue(firstRow, 'Tags');
+
+                const orderObj = {
+                    'Created at': formattedDate,
+                    'Name': orderName,
+                    'Tags': orderTag, 
+                    'Billing Name': getRowValue(firstRow, 'Billing Name'),
+                    'Billing Phone': formattedPhone,
+                    'Billing Street': getRowValue(firstRow, 'Billing Street'),
+                    'Billing City': getRowValue(firstRow, 'Billing City'),
+                    'Blank Column 1': '', // প্রথম ফাঁকা কলাম
+                    'Blank Column 2': '', // দ্বিতীয় ফাঁকা কলাম
+                    'Blank Column 3': '', // তৃতীয় ফাঁকা কলাম
+                    'Total': getRowValue(firstRow, 'Total')
+                };
+
+                rows.forEach((row, index) => {
+                    const itemIdx = index + 1;
+                    orderObj[`Lineitem name_${itemIdx}`] = getRowValue(row, 'Lineitem name');
+                    orderObj[`Lineitem quantity_${itemIdx}`] = getRowValue(row, 'Lineitem quantity');
+                });
+
+                if (rows.length > globalMaxLineItems) {
+                    globalMaxLineItems = rows.length;
+                }
+
+                processedDataForCopy.push(orderObj);
+            }
+
+            // ৪. হেডার লিস্ট তৈরি (প্রিভিউ এর জন্য ৩টি ফাঁকা কলাম সহ)
+            const headers = [
+                'Created at', 'Name', 'Tags', 'Billing Name', 'Billing Phone', 
+                'Billing Street', 'Billing City', '', '', '', 'Total'
+            ];
+            
+            for (let i = 1; i <= globalMaxLineItems; i++) {
+                headers.push('Lineitem name');
+                headers.push('Lineitem quantity');
+            }
+
+            // ৫. স্ক্রিনে প্রিভিউ দেখানোর জন্য টেবিল রেন্ডার
+            renderTable(headers, processedDataForCopy, globalMaxLineItems);
+            
+            showStatus('সফলভাবে কনভার্ট হয়েছে! নিচের বাটনটি চেপে কপি করুন।', 'success');
+            document.getElementById('actionArea').style.display = 'block';
+            document.getElementById('tableContainer').style.display = 'block';
+
+        } catch (error) {
+            console.error(error);
+            showStatus('ফাইলটি প্রসেস করতে সমস্যা হয়েছে। দয়া করে সঠিক সফিফাই ফাইলটি আপলোড করুন।', 'danger');
+        }
+    };
+
+    reader.readAsArrayBuffer(file);
+});
+
+function renderTable(headers, data, maxLineItems) {
+    const thead = document.getElementById('tableHead');
+    const tbody = document.getElementById('tableBody');
+    
+    thead.innerHTML = '';
+    tbody.innerHTML = '';
+
+    const trHead = document.createElement('tr');
+    headers.forEach(h => {
+        const th = document.createElement('th');
+        th.innerText = h;
+        trHead.appendChild(th);
+    });
+    thead.appendChild(trHead);
+
+    data.forEach(order => {
+        const tr = document.createElement('tr');
+        
+        const baseKeys = ['Created at', 'Name', 'Tags', 'Billing Name', 'Billing Phone', 'Billing Street', 'Billing City', 'Blank Column 1', 'Blank Column 2', 'Blank Column 3', 'Total'];
+        baseKeys.forEach(key => {
+            const td = document.createElement('td');
+            td.innerText = order[key] || '';
+            tr.appendChild(td);
+        });
+
+        for (let i = 1; i <= maxLineItems; i++) {
+            const tdName = document.createElement('td');
+            tdName.innerText = order[`Lineitem name_${i}`] || '';
+            tr.appendChild(tdName);
+
+            const tdQty = document.createElement('td');
+            tdQty.innerText = order[`Lineitem quantity_${i}`] || '';
+            tr.appendChild(tdQty);
+        }
+        
+        tbody.appendChild(tr);
+    });
+}
+
+// 📋 ১-ক্লিক প্লেইন টেক্সট কপি লজিক (হেডার ছাড়া, বর্ডার ছাড়া)
+document.getElementById('copyBtn').addEventListener('click', function() {
+    if (processedDataForCopy.length === 0) return;
+
+    let textRows = [];
+
+    processedDataForCopy.forEach(order => {
+        let cols = [];
+        
+        cols.push(order['Created at'] || '');
+        cols.push(order['Name'] || '');
+        cols.push(order['Tags'] || ''); 
+        cols.push(order['Billing Name'] || '');
+        cols.push(order['Billing Phone'] || ''); // `0 সহ নাম্বার কপি হবে
+        cols.push(order['Billing Street'] || '');
+        cols.push(order['Billing City'] || '');
+        cols.push(''); // ফাঁকা কলাম ১
+        cols.push(''); // ফাঁকা কলাম ২
+        cols.push(''); // ফাঁকা কলাম ৩
+        cols.push(order['Total'] || '');
+
+        for (let i = 1; i <= globalMaxLineItems; i++) {
+            cols.push(order[`Lineitem name_${i}`] || '');
+            cols.push(order[`Lineitem quantity_${i}`] || '');
+        }
+
+        textRows.push(cols.join('\t'));
+    });
+
+    const plainTextOutput = textRows.join('\n');
+
+    navigator.clipboard.writeText(plainTextOutput).then(() => {
+        const originalText = this.innerText;
+        this.innerText = '✅ প্লেইন টেক্সট কপিড!';
+        this.classList.remove('btn-copy');
+        this.classList.add('btn-success');
+        
+        setTimeout(() => {
+            this.innerText = originalText;
+            this.classList.remove('btn-success');
+            this.classList.add('btn-copy');
+        }, 3000);
+    }).catch(err => {
+        alert('কপি করতে সমস্যা হয়েছে, অনুগ্রহ করে আবার চেষ্টা করুন।');
+    });
+});
+
+function showStatus(message, type) {
+    const statusBox = document.getElementById('statusMessage');
+    statusBox.innerText = message;
+    statusBox.className = `alert mt-4 text-center alert-${type}`;
+    statusBox.classList.remove('d-none');
+}
+</script>
+
 </body>
 </html>
