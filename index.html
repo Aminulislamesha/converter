@@ -6,96 +6,479 @@
     <title>Shopify Order to Google Docs Formatter</title>
     <link rel="icon" type="image/x-icon" href="favicon.png">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            background-color: #f4f6f8;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            padding-bottom: 50px;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+            padding: 20px 0 60px 0;
+            min-height: 100vh;
         }
-        .converter-card {
-            max-width: 950px;
-            margin: 40px auto;
-            border: none;
-            border-radius: 16px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-            background: #ffffff;
+
+        /* ==================== HEADER ==================== */
+        .header {
+            background: linear-gradient(135deg, #008060 0%, #005a47 100%);
+            color: white;
+            padding: 30px 0;
+            margin-bottom: 40px;
+            box-shadow: 0 4px 20px rgba(0, 128, 96, 0.15);
         }
-        .shopify-brand-color {
-            color: #008060;
+
+        .header-content {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .header-icon {
+            font-size: 2.5rem;
+            opacity: 0.9;
+        }
+
+        .header-text h1 {
+            font-size: 2rem;
             font-weight: 700;
+            margin: 0;
+            letter-spacing: -0.5px;
         }
-        .btn-shopify {
-            background-color: #008060;
-            color: white;
-            border-radius: 8px;
-            padding: 12px 24px;
-            font-size: 1.1rem;
+
+        .header-text p {
+            font-size: 0.95rem;
+            opacity: 0.9;
+            margin: 5px 0 0 0;
+        }
+
+        /* ==================== MAIN CONTAINER ==================== */
+        .converter-card {
+            max-width: 1000px;
+            margin: 0 auto;
+            border: none;
+            border-radius: 20px;
+            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.1);
+            background: #ffffff;
+            overflow: hidden;
+        }
+
+        .card-header-custom {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 30px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .card-header-custom h2 {
+            color: #1a1a1a;
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .card-header-custom .subtitle {
+            color: #666;
+            font-size: 0.95rem;
+            margin-top: 8px;
+            line-height: 1.5;
+        }
+
+        /* ==================== FORM SECTION ==================== */
+        .form-section {
+            padding: 40px;
+        }
+
+        .form-group-custom {
+            margin-bottom: 30px;
+        }
+
+        .form-group-custom label {
+            font-weight: 600;
+            color: #1a1a1a;
+            font-size: 1rem;
+            margin-bottom: 12px;
+            display: block;
+            letter-spacing: 0.3px;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            display: block;
+        }
+
+        .file-input-area {
+            border: 2px dashed #d0d0d0;
+            border-radius: 12px;
+            padding: 40px 20px;
+            text-align: center;
+            background: #fafbfc;
+            cursor: pointer;
             transition: all 0.3s ease;
+            position: relative;
         }
-        .btn-shopify:hover {
-            background-color: #006e52;
-            color: white;
+
+        .file-input-area:hover {
+            border-color: #008060;
+            background: #f0faf7;
         }
-        .btn-copy {
-            background-color: #202124;
-            color: white;
+
+        .file-input-area.drag-over {
+            border-color: #008060;
+            background: #e8f7f3;
+            box-shadow: 0 8px 24px rgba(0, 128, 96, 0.15);
         }
-        .btn-copy:hover {
-            background-color: #3c4043;
-            color: white;
+
+        .file-input-area i {
+            font-size: 2.5rem;
+            color: #008060;
+            margin-bottom: 12px;
+            display: block;
         }
-        .table-responsive-container {
-            max-height: 450px;
-            overflow-y: auto;
-            border: 1px solid #dee2e6;
-            border-radius: 8px;
-            margin-top: 20px;
+
+        .file-input-area p {
+            margin: 0;
+            color: #555;
+            font-size: 0.95rem;
+        }
+
+        .file-input-area .file-name {
+            color: #008060;
+            font-weight: 600;
+            margin-top: 8px;
+        }
+
+        #excelFile {
             display: none;
         }
+
+        /* ==================== BUTTONS ==================== */
+        .btn-shopify {
+            background: linear-gradient(135deg, #008060 0%, #006e52 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 14px 32px;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 128, 96, 0.2);
+            letter-spacing: 0.5px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-shopify:hover {
+            background: linear-gradient(135deg, #006e52 0%, #005847 100%);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 128, 96, 0.3);
+        }
+
+        .btn-shopify:active {
+            transform: translateY(0);
+        }
+
+        .btn-copy {
+            background: linear-gradient(135deg, #202124 0%, #3c4043 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 12px 28px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(32, 33, 36, 0.2);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-copy:hover {
+            background: linear-gradient(135deg, #3c4043 0%, #5f6368 100%);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(32, 33, 36, 0.3);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;
+        }
+
+        /* ==================== STATUS MESSAGE ==================== */
+        .alert-custom {
+            border-radius: 10px;
+            border: none;
+            padding: 16px 20px;
+            margin-top: 24px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            animation: slideIn 0.3s ease;
+        }
+
+        .alert-info {
+            background: #e3f2fd;
+            color: #1565c0;
+            border-left: 4px solid #1565c0;
+        }
+
+        .alert-success {
+            background: #e8f5e9;
+            color: #2e7d32;
+            border-left: 4px solid #2e7d32;
+        }
+
+        .alert-danger {
+            background: #ffebee;
+            color: #c62828;
+            border-left: 4px solid #c62828;
+        }
+
+        .alert-custom i {
+            font-size: 1.2rem;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ==================== LOADING SPINNER ==================== */
+        .spinner-custom {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* ==================== ACTION AREA ==================== */
+        .action-area {
+            display: none;
+            padding: 40px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-top: 2px solid #e0e0e0;
+        }
+
+        .action-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .action-header h4 {
+            font-weight: 700;
+            color: #1a1a1a;
+            font-size: 1.3rem;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* ==================== TABLE STYLING ==================== */
+        .table-responsive-container {
+            max-height: 550px;
+            overflow-y: auto;
+            border-radius: 12px;
+            display: none;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        .table-responsive-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .table-responsive-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        .table-responsive-container::-webkit-scrollbar-thumb {
+            background: #008060;
+            border-radius: 10px;
+        }
+
+        .table-responsive-container::-webkit-scrollbar-thumb:hover {
+            background: #006e52;
+        }
+
         table {
             font-size: 0.85rem;
             white-space: nowrap;
+            margin-bottom: 0;
         }
-        thead {
+
+        table thead {
+            background: linear-gradient(135deg, #008060 0%, #006e52 100%);
+            color: white;
             position: sticky;
             top: 0;
-            background-color: #f8f9fa;
-            z-index: 1;
+            z-index: 10;
         }
-        .action-area {
-            display: none;
+
+        table thead th {
+            font-weight: 600;
+            padding: 16px 12px;
+            border: none;
+            letter-spacing: 0.3px;
+        }
+
+        table tbody tr {
+            border-bottom: 1px solid #e0e0e0;
+            transition: background-color 0.2s ease;
+        }
+
+        table tbody tr:hover {
+            background-color: #f5f9f7;
+        }
+
+        table tbody tr:nth-child(even) {
+            background-color: #fafbfc;
+        }
+
+        table tbody td {
+            padding: 14px 12px;
+            color: #333;
+            vertical-align: middle;
+        }
+
+        /* ==================== RESPONSIVE ==================== */
+        @media (max-width: 768px) {
+            .header-text h1 {
+                font-size: 1.5rem;
+            }
+
+            .form-section,
+            .action-area {
+                padding: 20px;
+            }
+
+            .card-header-custom {
+                padding: 20px;
+            }
+
+            .action-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .action-header .btn-copy {
+                width: 100%;
+                justify-content: center;
+            }
+
+            table {
+                font-size: 0.75rem;
+            }
+
+            table thead th,
+            table tbody td {
+                padding: 10px 8px;
+            }
+
+            .d-grid {
+                margin-top: 20px;
+            }
+        }
+
+        /* ==================== UTILITIES ==================== */
+        .d-none {
+            display: none !important;
+        }
+
+        .text-center {
+            text-align: center;
         }
     </style>
 </head>
 <body>
 
+<!-- HEADER -->
+<div class="header">
+    <div class="container">
+        <div class="header-content">
+            <div class="header-icon">
+                <i class="fas fa-file-excel"></i>
+            </div>
+            <div class="header-text">
+                <h1>Converter Pro</h1>
+                <p>Shopify to Google Docs Formatter</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MAIN CONTENT -->
 <div class="container">
-    <div class="card converter-card p-4 p-md-5">
-        <h2 class="text-center mb-3 shopify-brand-color">Shopify to Google Docs Formatter</h2>
-        <p class="text-muted text-center mb-4">
-            শপিফাই ফাইল আপলোড করুন। ট্যাগ এবং অন্যান্য ডাটা নিখুঁতভাবে প্রতিটি অর্ডারের নিজস্ব ডাটা অনুযায়ী প্রসেস হবে।
-        </p>
-
-        <div class="mb-4">
-            <label for="excelFile" class="form-label fw-bold">শপিফাই ফাইল সিলেক্ট করুন:</label>
-            <input class="form-control form-control-lg" type="file" id="excelFile" accept=".xlsx, .csv">
+    <div class="converter-card">
+        <!-- Card Header -->
+        <div class="card-header-custom">
+            <h2><i class="fas fa-cog"></i> Order Formatter</h2>
+            <p class="subtitle">
+                শপিফাই ফাইল আপলোড করুন। ট্যাগ এবং অন্যান্য ডাটা নিখুঁতভাবে প্রতিটি অর্ডারের জন্য ফরম্যাট করা হবে।
+            </p>
         </div>
 
-        <div class="d-grid gap-2">
-            <button id="convertBtn" class="btn btn-shopify btn-lg">Convert File</button>
+        <!-- Form Section -->
+        <div class="form-section">
+            <!-- File Upload -->
+            <div class="form-group-custom">
+                <label><i class="fas fa-file-upload" style="color: #008060; margin-right: 8px;"></i>শপিফাই ফাইল সিলেক্ট করুন</label>
+                <div class="file-input-wrapper">
+                    <div class="file-input-area" id="fileInputArea">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <p>ড্র্যাগ করে ফাইল এখানে রাখুন বা ক্লিক করে সিলেক্ট করুন</p>
+                        <p style="font-size: 0.85rem; color: #999; margin-top: 5px;">(.xlsx বা .csv)</p>
+                        <div class="file-name" id="fileName"></div>
+                    </div>
+                    <input class="form-control form-control-lg d-none" type="file" id="excelFile" accept=".xlsx, .csv">
+                </div>
+            </div>
+
+            <!-- Convert Button -->
+            <div class="d-grid gap-2">
+                <button id="convertBtn" class="btn btn-shopify btn-lg">
+                    <i class="fas fa-play"></i> Convert File
+                </button>
+            </div>
+
+            <!-- Status Message -->
+            <div id="statusMessage" class="alert-custom d-none" role="alert"></div>
         </div>
 
-        <div id="statusMessage" class="alert mt-4 d-none text-center" role="alert"></div>
-
+        <!-- Action Area -->
         <div class="action-area" id="actionArea">
-            <hr class="my-4">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h4 class="fw-bold mb-0 text-secondary">Formatted Data Preview:</h4>
-                <button id="copyBtn" class="btn btn-copy btn-lg">📋 ১-ক্লিক কপি করুন</button>
+            <div class="action-header">
+                <h4><i class="fas fa-table"></i> Formatted Data Preview</h4>
+                <button id="copyBtn" class="btn btn-copy btn-lg">
+                    <i class="fas fa-clipboard"></i> 📋 কপি করুন
+                </button>
             </div>
             
             <div class="table-responsive-container" id="tableContainer">
-                <table class="table table-bordered table-striped" id="outputTable">
+                <table class="table table-bordered" id="outputTable">
                     <thead id="tableHead"></thead>
                     <tbody id="tableBody"></tbody>
                 </table>
@@ -110,11 +493,53 @@
 let processedDataForCopy = [];
 let globalMaxLineItems = 0;
 
-// এক্সেল সিরিয়াল নাম্বারকে কাঙ্ক্ষিত ডেট ফরম্যাটে রূপান্তর করার ফাংশন
+// ==================== DRAG & DROP ==================== 
+const fileInputArea = document.getElementById('fileInputArea');
+const fileInput = document.getElementById('excelFile');
+const fileName = document.getElementById('fileName');
+
+fileInputArea.addEventListener('click', () => fileInput.click());
+
+['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+    fileInputArea.addEventListener(eventName, preventDefaults, false);
+});
+
+function preventDefaults(e) {
+    e.preventDefault();
+    e.stopPropagation();
+}
+
+['dragenter', 'dragover'].forEach(eventName => {
+    fileInputArea.addEventListener(eventName, () => {
+        fileInputArea.classList.add('drag-over');
+    });
+});
+
+['dragleave', 'drop'].forEach(eventName => {
+    fileInputArea.addEventListener(eventName, () => {
+        fileInputArea.classList.remove('drag-over');
+    });
+});
+
+fileInputArea.addEventListener('drop', (e) => {
+    const dt = e.dataTransfer;
+    const files = dt.files;
+    fileInput.files = files;
+    handleFileSelect();
+});
+
+fileInput.addEventListener('change', handleFileSelect);
+
+function handleFileSelect() {
+    if (fileInput.files.length > 0) {
+        fileName.textContent = `✓ ${fileInput.files[0].name}`;
+    }
+}
+
+// ==================== DATE FORMATTING ==================== 
 function formatExcelDate(excelTimestamp) {
     if (!excelTimestamp) return "";
     
-    // যদি অলরেডি সঠিক ফরম্যাটে টেক্সট থাকে, তবে কনভার্ট করার দরকার নেই
     if (String(excelTimestamp).includes('-') && String(excelTimestamp).includes(':')) {
         return excelTimestamp;
     }
@@ -122,7 +547,6 @@ function formatExcelDate(excelTimestamp) {
     const serial = parseFloat(excelTimestamp);
     if (isNaN(serial)) return excelTimestamp;
 
-    // এক্সেল টাইমস্ট্যাম্প থেকে মিলিসেকেন্ড হিসেব করা
     const utc_days  = Math.floor(serial - 25569);
     const utc_value = utc_days * 86400;
     const date_info = new Date(utc_value * 1000);
@@ -137,7 +561,6 @@ function formatExcelDate(excelTimestamp) {
 
     date_info.setHours(hours, minutes, seconds);
 
-    // ফরম্যাটিং: YYYY-MM-DD HH:MM:SS +0600
     const pad = (num) => String(num).padStart(2, '0');
     
     const year = date_info.getFullYear();
@@ -150,9 +573,8 @@ function formatExcelDate(excelTimestamp) {
     return `${year}-${month}-${day} ${hr}:${min}:${sec} +0600`;
 }
 
+// ==================== CONVERT BUTTON ==================== 
 document.getElementById('convertBtn').addEventListener('click', function() {
-    const fileInput = document.getElementById('excelFile');
-    
     if (fileInput.files.length === 0) {
         showStatus('অনুগ্রহ করে একটি .xlsx বা .csv ফাইল সিলেক্ট করুন!', 'danger');
         return;
@@ -161,7 +583,7 @@ document.getElementById('convertBtn').addEventListener('click', function() {
     const file = fileInput.files[0];
     const reader = new FileReader();
 
-    showStatus('ফাইল প্রসেস হচ্ছে, দয়া করে অপেক্ষা করুন...', 'info');
+    showStatus('ফাইল প্রসেস হচ্ছে, দয়া করে অপেক্ষা করুন...', 'info', true);
 
     reader.onload = function(e) {
         try {
@@ -187,7 +609,7 @@ document.getElementById('convertBtn').addEventListener('click', function() {
                 return "";
             };
 
-            // ১. ফরওয়ার্ড ফিল (Forward Fill) লজিক (ট্যাগ বাদ দিয়ে করা হয়েছে)
+            // Forward Fill Logic
             const essentialCols = ['Created at', 'Billing Name', 'Billing Phone', 'Billing Street', 'Billing City', 'Total'];
             let lastValidValues = {};
 
@@ -202,7 +624,7 @@ document.getElementById('convertBtn').addEventListener('click', function() {
                 });
             });
 
-            // ২. অর্ডার আইডি অনুযায়ী গ্রুপ করা
+            // Group by Order ID
             const ordersGrouped = {};
             rawRows.forEach(row => {
                 const orderName = String(getRowValue(row, 'Name')).trim();
@@ -214,7 +636,7 @@ document.getElementById('convertBtn').addEventListener('click', function() {
                 ordersGrouped[orderName].push(row);
             });
 
-            // ৩. ডাটা সাজানো
+            // Process Data
             processedDataForCopy = [];
             globalMaxLineItems = 0; 
 
@@ -222,17 +644,12 @@ document.getElementById('convertBtn').addEventListener('click', function() {
                 const rows = ordersGrouped[orderName];
                 const firstRow = rows[0];
 
-                // ফোন নাম্বার ফরম্যাটিং (শুরুতে `0 যুক্ত করা)
                 let phone = String(getRowValue(firstRow, 'Billing Phone')).split('.')[0].trim();
                 if (phone.startsWith('880')) phone = phone.substring(3);
                 if (phone.startsWith('0')) phone = phone.substring(1);
                 
-                // আপনার চাহিদা অনুযায়ী ফরম্যাট: `01685769910
                 let formattedPhone = phone ? '`0' + phone : "";
-
-                // ডেট ফরম্যাট ফিক্সিং
                 let formattedDate = formatExcelDate(getRowValue(firstRow, 'Created at'));
-
                 let orderTag = getRowValue(firstRow, 'Tags');
 
                 const orderObj = {
@@ -243,9 +660,9 @@ document.getElementById('convertBtn').addEventListener('click', function() {
                     'Billing Phone': formattedPhone,
                     'Billing Street': getRowValue(firstRow, 'Billing Street'),
                     'Billing City': getRowValue(firstRow, 'Billing City'),
-                    'Blank Column 1': '', // প্রথম ফাঁকা কলাম
-                    'Blank Column 2': '', // দ্বিতীয় ফাঁকা কলাম
-                    'Blank Column 3': '', // তৃতীয় ফাঁকা কলাম
+                    'Blank Column 1': '',
+                    'Blank Column 2': '',
+                    'Blank Column 3': '',
                     'Total': getRowValue(firstRow, 'Total')
                 };
 
@@ -262,7 +679,7 @@ document.getElementById('convertBtn').addEventListener('click', function() {
                 processedDataForCopy.push(orderObj);
             }
 
-            // ৪. হেডার লিস্ট তৈরি (প্রিভিউ এর জন্য ৩টি ফাঁকা কলাম সহ)
+            // Create Headers
             const headers = [
                 'Created at', 'Name', 'Tags', 'Billing Name', 'Billing Phone', 
                 'Billing Street', 'Billing City', '', '', '', 'Total'
@@ -273,22 +690,23 @@ document.getElementById('convertBtn').addEventListener('click', function() {
                 headers.push('Lineitem quantity');
             }
 
-            // ৫. স্ক্রিনে প্রিভিউ দেখানোর জন্য টেবিল রেন্ডার
+            // Render Table
             renderTable(headers, processedDataForCopy, globalMaxLineItems);
             
-            showStatus('সফলভাবে কনভার্ট হয়েছে! নিচের বাটনটি চেপে কপি করুন।', 'success');
+            showStatus('✓ সফলভাবে কনভার্ট হয়েছে! নিচের বাটনটি চেপে কপি করুন।', 'success');
             document.getElementById('actionArea').style.display = 'block';
             document.getElementById('tableContainer').style.display = 'block';
 
         } catch (error) {
             console.error(error);
-            showStatus('ফাইলটি প্রসেস করতে সমস্যা হয়েছে। দয়া করে সঠিক সফিফাই ফাইলটি আপলোড করুন।', 'danger');
+            showStatus('❌ ফাইলটি প্রসেস করতে সমস্যা হয়েছে। দয়া করে সঠিক শপিফাই ফাইলটি আপলোড করুন।', 'danger');
         }
     };
 
     reader.readAsArrayBuffer(file);
 });
 
+// ==================== RENDER TABLE ==================== 
 function renderTable(headers, data, maxLineItems) {
     const thead = document.getElementById('tableHead');
     const tbody = document.getElementById('tableBody');
@@ -328,7 +746,7 @@ function renderTable(headers, data, maxLineItems) {
     });
 }
 
-// 📋 ১-ক্লিক প্লেইন টেক্সট কপি লজিক (হেডার ছাড়া, বর্ডার ছাড়া)
+// ==================== COPY TO CLIPBOARD ==================== 
 document.getElementById('copyBtn').addEventListener('click', function() {
     if (processedDataForCopy.length === 0) return;
 
@@ -341,12 +759,12 @@ document.getElementById('copyBtn').addEventListener('click', function() {
         cols.push(order['Name'] || '');
         cols.push(order['Tags'] || ''); 
         cols.push(order['Billing Name'] || '');
-        cols.push(order['Billing Phone'] || ''); // `0 সহ নাম্বার কপি হবে
+        cols.push(order['Billing Phone'] || '');
         cols.push(order['Billing Street'] || '');
         cols.push(order['Billing City'] || '');
-        cols.push(''); // ফাঁকা কলাম ১
-        cols.push(''); // ফাঁকা কলাম ২
-        cols.push(''); // ফাঁকা কলাম ৩
+        cols.push('');
+        cols.push('');
+        cols.push('');
         cols.push(order['Total'] || '');
 
         for (let i = 1; i <= globalMaxLineItems; i++) {
@@ -361,24 +779,31 @@ document.getElementById('copyBtn').addEventListener('click', function() {
 
     navigator.clipboard.writeText(plainTextOutput).then(() => {
         const originalText = this.innerText;
-        this.innerText = '✅ প্লেইন টেক্সট কপিড!';
+        this.innerHTML = '<i class="fas fa-check"></i> ✅ কপি হয়েছে!';
         this.classList.remove('btn-copy');
         this.classList.add('btn-success');
         
         setTimeout(() => {
-            this.innerText = originalText;
+            this.innerHTML = originalText;
             this.classList.remove('btn-success');
             this.classList.add('btn-copy');
         }, 3000);
     }).catch(err => {
-        alert('কপি করতে সমস্যা হয়েছে, অনুগ্রহ করে আবার চেষ্টা করুন।');
+        showStatus('❌ কপি করতে সমস্যা হয়েছে, অনুগ্রহ করে আবার চেষ্টা করুন।', 'danger');
     });
 });
 
-function showStatus(message, type) {
+// ==================== STATUS MESSAGE ==================== 
+function showStatus(message, type, isLoading = false) {
     const statusBox = document.getElementById('statusMessage');
-    statusBox.innerText = message;
-    statusBox.className = `alert mt-4 text-center alert-${type}`;
+    
+    let icon = '';
+    if (type === 'danger') icon = '<i class="fas fa-exclamation-circle"></i>';
+    else if (type === 'success') icon = '<i class="fas fa-check-circle"></i>';
+    else if (type === 'info') icon = isLoading ? '<div class="spinner-custom"></div>' : '<i class="fas fa-info-circle"></i>';
+    
+    statusBox.innerHTML = `${icon} ${message}`;
+    statusBox.className = `alert-custom alert-${type}`;
     statusBox.classList.remove('d-none');
 }
 </script>
