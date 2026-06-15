@@ -91,6 +91,11 @@
         /* ==================== FORM SECTION ==================== */
         .form-section {
             padding: 40px;
+            transition: all 0.3s ease;
+        }
+
+        .form-section.hidden {
+            display: none;
         }
 
         .form-group-custom {
@@ -205,6 +210,28 @@
             box-shadow: 0 6px 20px rgba(32, 33, 36, 0.3);
         }
 
+        .btn-restart {
+            background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 12px 28px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(255, 107, 53, 0.2);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+
+        .btn-restart:hover {
+            background: linear-gradient(135deg, #f7931e 0%, #ff6b35 100%);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 107, 53, 0.3);
+        }
+
         .btn-success {
             background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;
         }
@@ -309,6 +336,12 @@
             border-radius: 20px;
             font-size: 0.85rem;
             font-weight: 600;
+        }
+
+        .action-header-right {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
         }
 
         /* ==================== TABLE STYLING ==================== */
@@ -429,12 +462,6 @@
             text-align: left;
         }
 
-        /* ==================== TABLE HIGHLIGHTING ==================== */
-        .table-cell-highlight {
-            background-color: #fff3cd !important;
-            color: #856404;
-        }
-
         /* ==================== EXPORT OPTIONS ==================== */
         .export-options {
             display: flex;
@@ -484,9 +511,14 @@
                 align-items: flex-start;
             }
 
-            .action-header .btn-copy {
+            .action-header-right {
                 width: 100%;
-                justify-content: center;
+                justify-content: flex-start;
+            }
+
+            .action-header .btn-copy,
+            .action-header .btn-restart {
+                flex: 1;
             }
 
             table {
@@ -577,7 +609,7 @@
         </div>
 
         <!-- Form Section -->
-        <div class="form-section">
+        <div class="form-section" id="formSection">
             <!-- File Upload -->
             <div class="form-group-custom">
                 <label><i class="fas fa-file-upload" style="color: #008060; margin-right: 8px;"></i>শপিফাই ফাইল সিলেক্ট করুন</label>
@@ -610,9 +642,14 @@
                     <h4><i class="fas fa-table"></i> Preview Data</h4>
                     <span class="stats-badge" id="statsCount">0 Orders</span>
                 </div>
-                <button id="copyBtn" class="btn btn-copy btn-lg">
-                    <i class="fas fa-clipboard"></i> 📋 Copy to Clipboard
-                </button>
+                <div class="action-header-right">
+                    <button id="copyBtn" class="btn btn-copy btn-lg">
+                        <i class="fas fa-clipboard"></i> 📋 Copy to Clipboard
+                    </button>
+                    <button id="restartBtn" class="btn btn-restart btn-lg">
+                        <i class="fas fa-redo"></i> Start Over
+                    </button>
+                </div>
             </div>
 
             <!-- Table Info & Controls -->
@@ -733,6 +770,36 @@ function formatExcelDate(excelTimestamp) {
 
     return `${year}-${month}-${day} ${hr}:${min}:${sec} +0600`;
 }
+
+// ==================== RESET FUNCTION ====================
+function resetConverter() {
+    // Clear data
+    processedDataForCopy = [];
+    globalMaxLineItems = 0;
+    filteredData = [];
+    
+    // Reset file input
+    fileInput.value = '';
+    fileName.textContent = '';
+    
+    // Hide action area
+    document.getElementById('actionArea').style.display = 'none';
+    document.getElementById('tableContainer').style.display = 'none';
+    
+    // Show form section
+    document.getElementById('formSection').classList.remove('hidden');
+    
+    // Clear status message
+    document.getElementById('statusMessage').classList.add('d-none');
+    
+    // Reset search
+    document.getElementById('searchInput').value = '';
+}
+
+// ==================== RESTART BUTTON ==================== 
+document.getElementById('restartBtn').addEventListener('click', function() {
+    resetConverter();
+});
 
 // ==================== CONVERT BUTTON ==================== 
 document.getElementById('convertBtn').addEventListener('click', function() {
@@ -857,9 +924,12 @@ document.getElementById('convertBtn').addEventListener('click', function() {
             renderTable(headers, processedDataForCopy, globalMaxLineItems);
             updateStats();
             
-            showStatus('✓ সফলভাবে কনভার্ট হয়েছে! নিচের বাটনটি চেপে কপি করুন।', 'success');
+            // Hide form and show action area
+            document.getElementById('formSection').classList.add('hidden');
             document.getElementById('actionArea').style.display = 'block';
             document.getElementById('tableContainer').style.display = 'block';
+            
+            showStatus('✓ সফলভাবে কনভার্ট হয়েছে! নিচের বাটনটি চেপে কপি করুন।', 'success');
 
         } catch (error) {
             console.error(error);
@@ -988,7 +1058,7 @@ document.getElementById('copyBtn').addEventListener('click', function() {
             this.classList.add('btn-copy');
         }, 3000);
     }).catch(err => {
-        showStatus('❌ কপি করতে সমস্যা হয়েছে, অনুগ্র��� করে আবার চেষ্টা করুন।', 'danger');
+        showStatus('❌ কপি করতে সমস্যা হয়েছে, অনুগ্রহ করে আবার চেষ্টা করুন।', 'danger');
     });
 });
 
