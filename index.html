@@ -604,7 +604,7 @@
         <div class="card-header-custom">
             <h2><i class="fas fa-cog"></i> Order Formatter</h2>
             <p class="subtitle">
-                শপিফাই ফাইল আপলোড করুন। ট্যাগ এবং অন্যান্য ডাটা নিখুঁতভাবে প্রতিটি অর্ডারের জন্য ফরম্যাট করা হবে।
+                শপিফাই ফাইল আপলোড করুন। ট্যাগ এবং অন্যান্য ডাটা নিখুঁতভাবে প্রতিটি অর্ডারের সাথে ফর্ম্যাট করা হবে।
             </p>
         </div>
 
@@ -771,6 +771,26 @@ function formatExcelDate(excelTimestamp) {
     return `${year}-${month}-${day} ${hr}:${min}:${sec} +0600`;
 }
 
+// ==================== ENCODING FIX FUNCTION ==================== 
+function ensureProperEncoding(value) {
+    if (!value) return value;
+    
+    let str = String(value);
+    
+    // Check for mojibake (garbled characters) pattern: common UTF-8 bytes interpreted as Latin-1
+    if (str.match(/[àáâãäåæçèéêëìíîïðñòóôõöø]/g)) {
+        try {
+            // Re-encode the string as if it were UTF-8 bytes interpreted as Latin-1
+            const encoded = new TextEncoder().encode(str);
+            str = new TextDecoder('utf-8').decode(encoded);
+        } catch (e) {
+            // If decoding fails, return original
+        }
+    }
+    
+    return str;
+}
+
 // ==================== RESET FUNCTION ====================
 function resetConverter() {
     // Clear data
@@ -831,7 +851,9 @@ document.getElementById('convertBtn').addEventListener('click', function() {
                 const targetKey = columnName.toLowerCase().replace(/\s+/g, '');
                 for (let key in row) {
                     if (key.toLowerCase().replace(/\s+/g, '') === targetKey) {
-                        return row[key];
+                        let value = row[key];
+                        // Ensure proper encoding for all values
+                        return ensureProperEncoding(value);
                     }
                 }
                 return "";
@@ -1009,137 +1031,95 @@ document.getElementById('searchInput').addEventListener('input', function(e) {
     updateStats();
 });
 
-// ==================== UPDATE STATS ==================== 
-function updateStats() {
-    document.getElementById('statsCount').textContent = `${processedDataForCopy.length} Order${processedDataForCopy.length !== 1 ? 's' : ''}`;
-    document.getElementById('rowCount').textContent = filteredData.length;
-}
-
 // ==================== COPY TO CLIPBOARD ==================== 
 document.getElementById('copyBtn').addEventListener('click', function() {
-    if (processedDataForCopy.length === 0) return;
-
-    let textRows = [];
-
-    processedDataForCopy.forEach(order => {
-        let cols = [];
-        
-        cols.push(order['Created at'] || '');
-        cols.push(order['Name'] || '');
-        cols.push(order['Tags'] || ''); 
-        cols.push(order['Billing Name'] || '');
-        cols.push(order['Billing Phone'] || '');
-        cols.push(order['Billing Street'] || '');
-        cols.push(order['Billing City'] || '');
-        cols.push('');
-        cols.push('');
-        cols.push('');
-        cols.push(order['Total'] || '');
-
+    const baseKeys = ['Created at', 'Name', 'Tags', 'Billing Name', 'Billing Phone', 'Billing Street', 'Billing City', 'Blank Column 1', 'Blank Column 2', 'Blank Column 3', 'Total'];
+    
+    let tsvContent = baseKeys.join('\t');
+    
+    for (let i = 1; i <= globalMaxLineItems; i++) {
+        tsvContent += '\tLineitem name\tLineitem quantity';
+    }
+    
+    tsvContent += '\n';
+    
+    filteredData.forEach(order => {
+        let row = baseKeys.map(key => String(order[key] || '')).join('\t');
         for (let i = 1; i <= globalMaxLineItems; i++) {
-            cols.push(order[`Lineitem name_${i}`] || '');
-            cols.push(order[`Lineitem quantity_${i}`] || '');
+            row += '\t' + String(order[`Lineitem name_${i}`] || '') + '\t' + String(order[`Lineitem quantity_${i}`] || '');
         }
-
-        textRows.push(cols.join('\t'));
+        tsvContent += row + '\n';
     });
 
-    const plainTextOutput = textRows.join('\n');
-
-    navigator.clipboard.writeText(plainTextOutput).then(() => {
-        const originalText = this.innerHTML;
-        this.innerHTML = '<i class="fas fa-check"></i> Copied!';
-        this.classList.remove('btn-copy');
-        this.classList.add('btn-success');
-        
-        setTimeout(() => {
-            this.innerHTML = originalText;
-            this.classList.remove('btn-success');
-            this.classList.add('btn-copy');
-        }, 3000);
-    }).catch(err => {
-        showStatus('❌ কপি করতে সমস্যা হয়েছে, অনুগ্রহ করে আবার চেষ্টা করুন।', 'danger');
+    navigator.clipboard.writeText(tsvContent).then(() => {
+        showStatus('✓ ক্লিপবোর্ডে কপি হয়েছে!', 'success');
+        setTimeout(() => document.getElementById('statusMessage').classList.add('d-none'), 2000);
     });
 });
 
 // ==================== DOWNLOAD CSV ==================== 
 document.getElementById('downloadCsvBtn').addEventListener('click', function() {
-    if (processedDataForCopy.length === 0) return;
-
-    let csvContent = [];
-
-    // Headers
-    const headers = [
-        'Created at', 'Name', 'Tags', 'Billing Name', 'Billing Phone', 
-        'Billing Street', 'Billing City', '', '', '', 'Total'
-    ];
+    const baseKeys = ['Created at', 'Name', 'Tags', 'Billing Name', 'Billing Phone', 'Billing Street', 'Billing City', 'Blank Column 1', 'Blank Column 2', 'Blank Column 3', 'Total'];
+    
+    let csvContent = baseKeys.map(k => `"${k.replace(/"/g, '""')}"`).join(',');
     
     for (let i = 1; i <= globalMaxLineItems; i++) {
-        headers.push(`Lineitem name ${i}`);
-        headers.push(`Lineitem quantity ${i}`);
+        csvContent += `,"Lineitem name","Lineitem quantity"`;
     }
-    csvContent.push(headers.map(h => `"${h}"`).join(','));
-
-    // Data
-    processedDataForCopy.forEach(order => {
-        let cols = [];
+    
+    csvContent += '\n';
+    
+    filteredData.forEach(order => {
+        let row = baseKeys.map(key => {
+            const val = String(order[key] || '');
+            return `"${val.replace(/"/g, '""')}"`;
+        }).join(',');
         
-        cols.push(order['Created at'] || '');
-        cols.push(order['Name'] || '');
-        cols.push(order['Tags'] || ''); 
-        cols.push(order['Billing Name'] || '');
-        cols.push(order['Billing Phone'] || '');
-        cols.push(order['Billing Street'] || '');
-        cols.push(order['Billing City'] || '');
-        cols.push('');
-        cols.push('');
-        cols.push('');
-        cols.push(order['Total'] || '');
-
         for (let i = 1; i <= globalMaxLineItems; i++) {
-            cols.push(order[`Lineitem name_${i}`] || '');
-            cols.push(order[`Lineitem quantity_${i}`] || '');
+            row += `,"${String(order[`Lineitem name_${i}`] || '').replace(/"/g, '""')}","${String(order[`Lineitem quantity_${i}`] || '').replace(/"/g, '""')}"`;
         }
-
-        csvContent.push(cols.map(c => `"${c}"`).join(','));
+        
+        csvContent += row + '\n';
     });
 
-    downloadFile(csvContent.join('\n'), 'orders.csv', 'text/csv');
+    downloadFile(csvContent, 'orders.csv', 'text/csv;charset=utf-8;');
 });
 
 // ==================== DOWNLOAD JSON ==================== 
 document.getElementById('downloadJsonBtn').addEventListener('click', function() {
-    if (processedDataForCopy.length === 0) return;
-
-    const jsonData = JSON.stringify(processedDataForCopy, null, 2);
-    downloadFile(jsonData, 'orders.json', 'application/json');
+    const jsonContent = JSON.stringify(filteredData, null, 2);
+    downloadFile(jsonContent, 'orders.json', 'application/json;charset=utf-8;');
 });
 
-// ==================== DOWNLOAD FILE HELPER ==================== 
-function downloadFile(content, filename, type) {
-    const blob = new Blob([content], { type: type });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    window.URL.revokeObjectURL(url);
-    document.body.removeChild(a);
+// ==================== FILE DOWNLOAD ==================== 
+function downloadFile(content, fileName, mimeType) {
+    const blob = new Blob([content], { type: mimeType });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = fileName;
+    link.click();
+    URL.revokeObjectURL(link.href);
+}
+
+// ==================== UPDATE STATS ==================== 
+function updateStats() {
+    document.getElementById('statsCount').innerText = filteredData.length + ' Orders';
+    document.getElementById('rowCount').innerText = filteredData.length;
 }
 
 // ==================== STATUS MESSAGE ==================== 
-function showStatus(message, type, isLoading = false) {
-    const statusBox = document.getElementById('statusMessage');
+function showStatus(message, type = 'info', isLoading = false) {
+    const statusDiv = document.getElementById('statusMessage');
+    statusDiv.className = `alert-custom alert-${type}`;
     
-    let icon = '';
-    if (type === 'danger') icon = '<i class="fas fa-exclamation-circle"></i>';
-    else if (type === 'success') icon = '<i class="fas fa-check-circle"></i>';
-    else if (type === 'info') icon = isLoading ? '<div class="spinner-custom"></div>' : '<i class="fas fa-info-circle"></i>';
+    if (isLoading) {
+        statusDiv.innerHTML = `<div class="spinner-custom"></div> ${message}`;
+    } else {
+        const iconClass = type === 'success' ? 'fa-check-circle' : type === 'danger' ? 'fa-exclamation-circle' : 'fa-info-circle';
+        statusDiv.innerHTML = `<i class="fas ${iconClass}"></i> ${message}`;
+    }
     
-    statusBox.innerHTML = `${icon} ${message}`;
-    statusBox.className = `alert-custom alert-${type}`;
-    statusBox.classList.remove('d-none');
+    statusDiv.classList.remove('d-none');
 }
 </script>
 
