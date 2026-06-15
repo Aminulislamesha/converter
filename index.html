@@ -1043,29 +1043,47 @@ document.getElementById('searchInput').addEventListener('input', function(e) {
 // ==================== COPY TO CLIPBOARD ==================== 
 document.getElementById('copyBtn').addEventListener('click', function() {
     const baseKeys = ['Created at', 'Name', 'Tags', 'Billing Name', 'Billing Phone', 'Billing Street', 'Billing City', 'Blank Column 1', 'Blank Column 2', 'Blank Column 3', 'Total'];
-    
-    let tsvContent = baseKeys.join('\t');
-    
-    for (let i = 1; i <= globalMaxLineItems; i++) {
-        tsvContent += '\tLineitem name\tLineitem quantity';
-    }
-    
-    tsvContent += '\n';
-    
+
+    let tsvContent = '';
+
     filteredData.forEach(order => {
         let row = baseKeys.map(key => String(order[key] || '')).join('\t');
+
         for (let i = 1; i <= globalMaxLineItems; i++) {
-            row += '\t' + String(order[`Lineitem name_${i}`] || '') + '\t' + String(order[`Lineitem quantity_${i}`] || '');
+            row += '\t' +
+                String(order[`Lineitem name_${i}`] || '') +
+                '\t' +
+                String(order[`Lineitem quantity_${i}`] || '');
         }
+
         tsvContent += row + '\n';
     });
 
     navigator.clipboard.writeText(tsvContent).then(() => {
+
+        const copyBtn = document.getElementById('copyBtn');
+
+        // Change button appearance
+        copyBtn.innerHTML =
+            '<i class="fas fa-check"></i> Copied';
+
+        copyBtn.classList.add('btn-success');
+
         showStatus('✓ ক্লিপবোর্ডে কপি হয়েছে!', 'success');
-        setTimeout(() => document.getElementById('statusMessage').classList.add('d-none'), 2000);
+
+        // Restore button after 2 seconds
+        setTimeout(() => {
+            copyBtn.innerHTML =
+                '<i class="fas fa-clipboard"></i> Copy to Clipboard';
+
+            copyBtn.classList.remove('btn-success');
+        }, 2000);
+
+    }).catch(err => {
+        console.error(err);
+        showStatus('❌ Copy failed!', 'danger');
     });
 });
-
 // ==================== DOWNLOAD CSV ==================== 
 document.getElementById('downloadCsvBtn').addEventListener('click', function() {
     const baseKeys = ['Created at', 'Name', 'Tags', 'Billing Name', 'Billing Phone', 'Billing Street', 'Billing City', 'Blank Column 1', 'Blank Column 2', 'Blank Column 3', 'Total'];
