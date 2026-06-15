@@ -771,24 +771,30 @@ function formatExcelDate(excelTimestamp) {
     return `${year}-${month}-${day} ${hr}:${min}:${sec} +0600`;
 }
 
-// ==================== ENCODING FIX FUNCTION ==================== 
-function ensureProperEncoding(value) {
-    if (!value) return value;
+// ==================== FIX UTF-8 MOJIBAKE ==================== 
+function fixMojibake(str) {
+    if (!str || typeof str !== 'string') return str;
     
-    let str = String(value);
+    // Check if string contains mojibake indicators (accented Latin chars used as UTF-8 bytes)
+    const mojibakePattern = /[\xc0-\xff]/g;
     
-    // Check for mojibake (garbled characters) pattern: common UTF-8 bytes interpreted as Latin-1
-    if (str.match(/[àáâãäåæçèéêëìíîïðñòóôõöø]/g)) {
-        try {
-            // Re-encode the string as if it were UTF-8 bytes interpreted as Latin-1
-            const encoded = new TextEncoder().encode(str);
-            str = new TextDecoder('utf-8').decode(encoded);
-        } catch (e) {
-            // If decoding fails, return original
+    if (!mojibakePattern.test(str)) return str;
+    
+    try {
+        // Create array from string treating each char as a byte
+        const bytes = [];
+        for (let i = 0; i < str.length; i++) {
+            bytes.push(str.charCodeAt(i) & 0xFF);
         }
+        
+        // Decode the bytes as UTF-8
+        const decoder = new TextDecoder('utf-8');
+        const correctedStr = decoder.decode(new Uint8Array(bytes));
+        
+        return correctedStr;
+    } catch (e) {
+        return str;
     }
-    
-    return str;
 }
 
 // ==================== RESET FUNCTION ====================
@@ -852,8 +858,11 @@ document.getElementById('convertBtn').addEventListener('click', function() {
                 for (let key in row) {
                     if (key.toLowerCase().replace(/\s+/g, '') === targetKey) {
                         let value = row[key];
-                        // Ensure proper encoding for all values
-                        return ensureProperEncoding(value);
+                        // Fix UTF-8 mojibake
+                        if (typeof value === 'string') {
+                            value = fixMojibake(value);
+                        }
+                        return value;
                     }
                 }
                 return "";
