@@ -1048,7 +1048,7 @@ document.getElementById('copyBtn').addEventListener('click', function() {
 
     navigator.clipboard.writeText(plainTextOutput).then(() => {
         const originalText = this.innerHTML;
-        this.innerHTML = '<i class="fas fa-check"></i>Copied!';
+        this.innerHTML = '<i class="fas fa-check"></i> Copied!';
         this.classList.remove('btn-copy');
         this.classList.add('btn-success');
         
